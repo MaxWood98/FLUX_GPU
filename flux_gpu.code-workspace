@@ -5,8 +5,15 @@
 		}
 	],
 	"settings": {
-		"fortran.linter.modOutput": "${workspaceFolder}/obj",
+		"fortran.linter.modOutput": "${workspaceFolder}/obj_lint",
+		"fortran.fortls.path": "fortls",
+		"fortran.linter.compiler": "gfortran",
+		"fortran.linter.extraArgs": [
+			"-Wall",
+			"-fopenacc",
+			"-fopenmp"
+  		],
 		"makefile.extensionOutputFolder": "./.vscode",
 		"makefile.configureOnOpen": false
-	}
+	},
 }

@@ -627,10 +627,10 @@ do clr=1,ncolour
         !$OMP end parallel 
         !$OMP parallel do private(ee)
         do cc=1,mesh_cpx%ncell
-            pr1c(cc) = cmplx(0.0d0,0.0d0) 
-            pr2c(cc) = cmplx(0.0d0,0.0d0) 
-            pr3c(cc) = cmplx(0.0d0,0.0d0) 
-            pr4c(cc) = cmplx(0.0d0,0.0d0) 
+            pr1c(cc) = cmplx(0.0d0,0.0d0,dp) 
+            pr2c(cc) = cmplx(0.0d0,0.0d0,dp) 
+            pr3c(cc) = cmplx(0.0d0,0.0d0,dp) 
+            pr4c(cc) = cmplx(0.0d0,0.0d0,dp) 
             do ee=1,mesh_cpx%cells(cc)%nedge
                 pr1c(cc) = pr1c(cc) + (mesh_cpx%edges_r1(mesh_cpx%cells(cc)%edge(ee)) + mesh_cpx%edges_d1(mesh_cpx%cells(cc)%edge(ee)))*mesh_cpx%cells(cc)%edge_sign(ee)
                 pr2c(cc) = pr2c(cc) + (mesh_cpx%edges_r2(mesh_cpx%cells(cc)%edge(ee)) + mesh_cpx%edges_d2(mesh_cpx%cells(cc)%edge(ee)))*mesh_cpx%cells(cc)%edge_sign(ee)

@@ -11,6 +11,7 @@ contains
 !VanLeer flux ===============
 subroutine vanleer_flux(rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,gamma,nx,ny,elen,fx1,fx2,fx3,fx4)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,gamma,nx,ny,elen
@@ -149,6 +150,7 @@ end subroutine vanleer_flux_cpx
 !AUSM flux ===============
 subroutine ausm_flux(rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,gamma,nx,ny,elen,fx1,fx2,fx3,fx4)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,gamma,nx,ny,elen
@@ -273,6 +275,7 @@ end subroutine ausm_flux_cpx
 !AUSM+up flux ===============
 subroutine ausmpup_flux(rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,gamma,nx,ny,elen,fx1,fx2,fx3,fx4,machinf,R)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,gamma,nx,ny,elen,machinf,R
@@ -341,6 +344,7 @@ end subroutine ausmpup_flux
 !AUSM+up mach function ===============
 function ausmpup_mach_blend(m,pm) result(m4)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: m,pm,m4
@@ -365,6 +369,7 @@ end function ausmpup_mach_blend
 !AUSM+up pressure function ===============
 function ausmpup_pressure_blend(m,pm,fa) result(p5)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: m,pm,p5,fa
@@ -538,6 +543,7 @@ end function ausmpup_pressure_blend_cpx
 !Roe flux ===============
 subroutine roe_flux(rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,gamma,nx,ny,elen,fx1,fx2,fx3,fx4)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,gamma,nx,ny,elen
@@ -614,6 +620,7 @@ end subroutine roe_flux
 !Roe eigenvalue fix function ===============
 function roe_eigen_fix(lamdain,delta) result(lamdaout)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: delta
@@ -631,6 +638,7 @@ end function roe_eigen_fix
 !Jameson flux ===============
 subroutine jameson_flux(rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,nx,ny,elen,fx1,fx2,fx3,fx4)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: rho1,u1,v1,e1,p1,rho2,u2,v2,e2,p2,nx,ny,elen
@@ -701,6 +709,7 @@ end subroutine jameson_flux_cpx
 !farfield prescribed boundary condition (supersonic) ===============
 subroutine farfield_supersonic_bc_prescribed(rhob,ub,vb,pb,eb,mesh,c,options,inflow_outflow)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 integer(in64) :: c,inflow_outflow
@@ -757,6 +766,7 @@ end subroutine farfield_supersonic_bc_prescribed_cpx
 !farfield characteristic boundary condition (subsonic) ===============
 subroutine farfield_subsonic_bc_characteristic(rhob,ub,vb,pb,eb,mesh,c,e,options,inflow_outflow)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 integer(in64) :: e,c,inflow_outflow
@@ -913,6 +923,7 @@ end subroutine farfield_subsonic_bc_characteristic_cpx
 !stagnation inflow ===============
 subroutine subsonic_stagnation_inflow_bc(rhob,ub,vb,pb,eb,mesh,c,e,options)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 integer(in64) :: e,c
@@ -1035,6 +1046,7 @@ end subroutine subsonic_stagnation_inflow_bc_cpx
 !pressure outflow boundary condition (subsonic) ===============
 subroutine subsonic_pressure_outflow_bc_characteristic(rhob,ub,vb,pb,eb,mesh,c,e,options,pratio)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 integer(in64) :: e,c

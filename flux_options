@@ -5,11 +5,11 @@
 console_display = yes
 
 #mesh path 
-meshpath = grid_cell_naca
+meshpath = grid_cell_cavos_rand8x8
 
 #flow conditions 
 aoadeg = 10.0
-machinf = 0.5
+machinf = 2.5
 gamma = 1.4
 R = 287.058
 tinf = 288.0
@@ -17,12 +17,12 @@ rhoinf = 1.225
 outflow_pratio = 0.0
 
 #solver options 
-niter_max = 10
-cfl = 2.0
-k2 = 0.0001 
-k4 = 0.0001
+niter_max = 10000
+cfl = 0.8
+k2 = 0.01 
+k4 = 0.01
 flux_method = ausm+up
-num_threads = 16
+num_threads = 0
 residual_convtol = -8.0 
 
 #Runge-Kutta stage dissipation evaluation tags 1 2 3 4

@@ -25,7 +25,7 @@ real(dp) :: rk4_alpha(4) = (/1.0d0/4.0d0,1.0d0/3.0d0,1.0d0/2.0d0,1.0d0/) !rk4
 type flux_options 
     logical :: cdisplay
     logical, dimension(:), allocatable :: rk_dissipation
-    integer(in64) :: niter_max,rk_niter,num_threads
+    integer(in64) :: niter_max,rk_niter,num_threads,flux_method_idx
     real(dp) :: cfl,aoadeg,aoarad,gamma,R,k2,k4,residual_convtol,outflow_pratio
     real(dp) :: machinf,tinf,rhoinf,cinf,pinf,velinf,uinf,vinf,p0inf,rho0inf,t0inf
     character(len=:), allocatable :: meshpath,meshname,mode,flux_method,adjoint_objective
@@ -300,6 +300,7 @@ end function edge_volume
 !speed of sound ===============
 function speed_of_sound(p,rho,gamma) result(c)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: p,rho,gamma,c 
@@ -324,6 +325,7 @@ end function speed_of_sound_cpx
 !pressure coefficient ===============
 function pressure_coefficient(p,options) result(cp)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: p,cp
@@ -337,6 +339,7 @@ end function pressure_coefficient
 !energy ===============
 function energy(p,rho,vel,gamma) result(e)
 implicit none 
+!$acc routine seq
 
 !variables - inout 
 real(dp) :: p,rho,vel,gamma,e 
@@ -397,6 +400,7 @@ end function stagnation_temperature
 !change basis =========================
 function change_basis(Ma2b,va) result(vb)
 implicit none
+!$acc routine seq
 
 !variables - inout
 real(dp) :: va(2),vb(2)
@@ -425,6 +429,7 @@ end function change_basis_cpx
 !get change of basis matrices =========================
 subroutine get_basis_change_2d(Ma2b,Mb2a,bx,by)
 implicit none 
+!$acc routine seq
 
 !variables - inout
 real(dp) :: bx(2),by(2)
@@ -507,6 +512,7 @@ end subroutine prim2con_cpx
 !conservative to primative variables ===============
 subroutine con2prim(rho,u,v,p,e,gamma,w1,w2,w3,w4)
 implicit none 
+!$acc routine seq
 
 !variables - inout
 real(dp) :: rho,u,v,p,e,gamma,w1,w2,w3,w4
@@ -571,6 +577,7 @@ options%k4 = 0.1d0
 options%num_threads = 1
 options%residual_convtol = -8.0 
 options%flux_method = 'vanleer'
+options%flux_method_idx = 0
 
 !adjoint options
 options%adjoint_objective = 'cd'

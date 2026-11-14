@@ -72,6 +72,17 @@ call set_real_opt(options%cfl,fh,'cfl')
 call set_real_opt(options%k2,fh,'k2')
 call set_real_opt(options%k4,fh,'k4')
 call set_str_opt(options%flux_method,fh,'flux_method')
+if (options%flux_method == 'vanleer') then 
+    options%flux_method_idx = 0
+elseif (options%flux_method == 'ausm') then 
+    options%flux_method_idx = 1
+elseif (options%flux_method == 'ausm+up') then 
+    options%flux_method_idx = 2
+elseif (options%flux_method == 'roe') then 
+    options%flux_method_idx = 3
+elseif (options%flux_method == 'jameson') then 
+    options%flux_method_idx = 4
+end if 
 call set_str_opt(options%adjoint_objective,fh,'adjoint_objective')
 itemtemp = -1 
 call set_int_opt(itemtemp,fh,'num_threads')

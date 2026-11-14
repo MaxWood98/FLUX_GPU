@@ -7,7 +7,7 @@
 # buildargs = -O2 -fopt-info-optimized=$@_opt.dat
 # buildargs = -O3 -march=native -ffast-math -fopenmp -fno-stack-arrays -fno-protect-parens
 # buildargs = -O3 -march=native -ffast-math -funroll-loops -ftree-vectorize -fopenmp
-buildargs = -O0 -Mbackslash
+buildargs = -O3 -Mbackslash -acc -Minfo=accel -gpu=cc89
 
 #build settings
 buildsettings = -module obj
