@@ -1,0 +1,588 @@
+!flux 2d data and methods module 
+!max wood
+!version : 0.0.3
+!updated : 04-07-26
+
+!module 
+module flux_data_methods
+
+!integer data types 
+use ISO_FORTRAN_ENV, only: in16=>int16
+use ISO_FORTRAN_ENV, only: in32=>int32
+use ISO_FORTRAN_ENV, only: in64=>int64
+
+!real data types 
+use ISO_FORTRAN_ENV, only: sp=>real32 
+use ISO_FORTRAN_ENV, only: dp=>real64
+
+!define constant pi 
+real(dp) :: pi = 4.0d0*atan(1.0d0)
+
+!define rk 
+real(dp) :: rk4_alpha(4) = (/1.0d0/4.0d0,1.0d0/3.0d0,1.0d0/2.0d0,1.0d0/) !rk4 
+
+!options type
+type flux_options 
+    logical :: cdisplay
+    logical, dimension(:), allocatable :: rk_dissipation
+    integer(in64) :: niter_max,rk_niter,num_threads
+    real(dp) :: cfl,aoadeg,aoarad,gamma,R,k2,k4,residual_convtol,outflow_pratio
+    real(dp) :: machinf,tinf,rhoinf,cinf,pinf,velinf,uinf,vinf,p0inf,rho0inf,t0inf
+    character(len=:), allocatable :: meshpath,meshname,mode,flux_method,adjoint_objective
+end type flux_options 
+
+!vertex types
+type flux_vertex
+    integer(in64) :: index
+    integer(in64) :: ncell
+    integer(in64), dimension(:), allocatable :: cells
+    real(dp) :: coordinate(2)
+end type flux_vertex
+type flux_vertex_cpx
+    integer(in64) :: index
+    integer(in64) :: ncell
+    integer(in64), dimension(:), allocatable :: cells
+    complex(dp) :: coordinate(2)
+end type flux_vertex_cpx
+
+!edge types
+type flux_edge 
+    integer(in64) :: index
+    integer(in64) :: v1,v2,c1,c2
+    real(dp) :: dx,dy,nx,ny,length
+end type flux_edge
+type flux_edge_cpx 
+    integer(in64) :: index
+    integer(in64) :: v1,v2,c1,c2
+    complex(dp) :: dx,dy,nx,ny,length
+end type flux_edge_cpx
+
+!cell types
+type flux_cell 
+    integer(in64) :: index
+    integer(in64) :: nedge
+    integer(in64), dimension(:), allocatable :: edgev1,edgev2,edgec,edge
+    real(dp), dimension(:), allocatable :: edge_sign
+end type flux_cell
+type flux_cell_cpx
+    integer(in64) :: index
+    integer(in64) :: nedge
+    integer(in64), dimension(:), allocatable :: edgev1,edgev2,edgec,edge
+    complex(dp), dimension(:), allocatable :: edge_sign
+end type flux_cell_cpx
+
+!mesh type 
+type flux_mesh
+    integer(in64) :: nvertex,nedge,ncell 
+    real(dp) :: cx,cy,cl,cd,cm,mflux_in,mflux_out,rhores,psires
+    integer(in64), dimension(:), allocatable :: vertices_colour,cells_colour,cells_nadj
+    real(dp), dimension(:), allocatable :: cells_specrad,cells_volume,cells_dt,cells_psensor
+    real(dp), dimension(:), allocatable :: edges_specrad
+    real(dp), dimension(:), allocatable :: rho,u,v,p,mach,e,cp
+    real(dp), dimension(:), allocatable :: w1,w2,w3,w4,w10,w20,w30,w40,residual
+    real(dp), dimension(:), allocatable :: l1,l2,l3,l4
+    real(dp), dimension(:), allocatable :: psi0,psi,psi_rho,psi_u,psi_v,psi_e,psi_dRdw_prd
+    real(dp), dimension(:), allocatable :: edges_r1,edges_r2,edges_r3,edges_r4
+    real(dp), dimension(:), allocatable :: edges_l1,edges_l2,edges_l3,edges_l4
+    real(dp), dimension(:), allocatable :: edges_d1,edges_d2,edges_d3,edges_d4
+    real(dp), dimension(:), allocatable :: edges_pn,edges_pd
+    real(dp), dimension(:), allocatable :: vertex_derivative_x,vertex_derivative_y
+    type(flux_vertex), dimension(:), allocatable :: vertices
+    type(flux_edge), dimension(:), allocatable :: edges
+    type(flux_cell), dimension(:), allocatable :: cells 
+    contains 
+        procedure :: get_edges_geometry
+        procedure :: get_cells_volume
+        procedure :: get_cells_nadj
+        procedure :: get_vertex_cells
+end type flux_mesh
+
+!complex mesh type 
+type flux_mesh_cpx
+    integer(in64) :: nvertex,nedge,ncell 
+    complex(dp) :: cx,cy,cl,cd,cm,mflux_in,mflux_out
+    integer(in64), dimension(:), allocatable :: vertices_colour,cells_colour,cells_nadj
+    complex(dp), dimension(:), allocatable :: cells_specrad,cells_volume,cells_dt,cells_psensor
+    complex(dp), dimension(:), allocatable :: edges_specrad
+    complex(dp), dimension(:), allocatable :: rho,u,v,p,mach,e,cp
+    complex(dp), dimension(:), allocatable :: w1,w2,w3,w4,w10,w20,w30,w40,residual
+    complex(dp), dimension(:), allocatable :: l1,l2,l3,l4
+    complex(dp), dimension(:), allocatable :: psi0,psi,psi_rho,psi_u,psi_v,psi_e,psi_dRdw_prd
+    complex(dp), dimension(:), allocatable :: edges_r1,edges_r2,edges_r3,edges_r4
+    complex(dp), dimension(:), allocatable :: edges_l1,edges_l2,edges_l3,edges_l4
+    complex(dp), dimension(:), allocatable :: edges_d1,edges_d2,edges_d3,edges_d4
+    complex(dp), dimension(:), allocatable :: edges_pn,edges_pd
+    complex(dp), dimension(:), allocatable :: vertex_derivative_x,vertex_derivative_y
+    type(flux_vertex_cpx), dimension(:), allocatable :: vertices
+    type(flux_edge_cpx), dimension(:), allocatable :: edges
+    type(flux_cell_cpx), dimension(:), allocatable :: cells 
+    contains 
+        procedure :: get_edges_geometry => get_edges_geometry_cpx
+    !     procedure :: get_cells_volume
+    !     procedure :: get_cells_nadj
+    !     procedure :: get_vertex_cells
+end type flux_mesh_cpx
+
+!csc matrix type 
+type csc_matrix
+    integer(in64) :: nnz,nrow,ncol 
+    integer(in64), dimension(:), allocatable :: row,column
+    integer(in64), dimension(:), allocatable :: col_pointer
+    real(dp), dimension(:), allocatable :: value
+end type csc_matrix
+
+!routines 
+contains 
+
+!======================================================
+!class methods ========================================
+!======================================================
+
+!evaluate edges geometry ===============
+subroutine get_edges_geometry(self) 
+implicit none 
+
+!variables - inout
+class(flux_mesh) :: self 
+
+!variables - local
+integer(in64) :: ii 
+real(dp) :: dx,dy 
+
+!evaluate 
+do ii=1,self%nedge
+    dx = self%vertices(self%edges(ii)%v2)%coordinate(1) - self%vertices(self%edges(ii)%v1)%coordinate(1)
+    dy = self%vertices(self%edges(ii)%v2)%coordinate(2) - self%vertices(self%edges(ii)%v1)%coordinate(2)
+    self%edges(ii)%length = sqrt(dx*dx + dy*dy)
+    self%edges(ii)%dx = dx 
+    self%edges(ii)%dy = dy 
+    self%edges(ii)%nx = dy/self%edges(ii)%length
+    self%edges(ii)%ny = -dx/self%edges(ii)%length
+end do 
+return 
+end subroutine get_edges_geometry
+
+!evaluate edges geometry (complex) ===============
+subroutine get_edges_geometry_cpx(self) 
+implicit none 
+
+!variables - inout
+class(flux_mesh_cpx) :: self 
+
+!variables - local
+integer(in64) :: ii 
+complex(dp) :: dx,dy 
+
+!evaluate 
+do ii=1,self%nedge
+    dx = self%vertices(self%edges(ii)%v2)%coordinate(1) - self%vertices(self%edges(ii)%v1)%coordinate(1)
+    dy = self%vertices(self%edges(ii)%v2)%coordinate(2) - self%vertices(self%edges(ii)%v1)%coordinate(2)
+    self%edges(ii)%length = sqrt(dx*dx + dy*dy)
+    self%edges(ii)%dx = dx 
+    self%edges(ii)%dy = dy 
+    self%edges(ii)%nx = dy/self%edges(ii)%length
+    self%edges(ii)%ny = -dx/self%edges(ii)%length
+end do 
+return 
+end subroutine get_edges_geometry_cpx
+
+!evaluate cell volumes ===============
+subroutine get_cells_volume(self)
+implicit none 
+
+!variables - inout
+class(flux_mesh) :: self
+
+!variables - local
+integer(in64) :: ii,jj
+
+!evaluate cell volumes 
+do ii=1,self%ncell
+    self%cells_volume(ii) = 0.0d0
+    do jj=1,self%cells(ii)%nedge
+        self%cells_volume(ii) = self%cells_volume(ii) + edge_volume(self%vertices(self%cells(ii)%edgev1(jj))%coordinate,self%vertices(self%cells(ii)%edgev2(jj))%coordinate) 
+    end do 
+end do 
+
+
+! self%cells_volume(:) = 0.0d0 
+! do ii=1,self%ncell
+!     self%cells_volume(ii) = 0.0d0
+!     do jj=1,self%cells(ii)%nedge
+        
+!         self%cells_volume(ii) = self%cells_volume(ii) + self%cells(ii)%edge_sign(jj)* &
+!         edge_volume( self%vertices(self%edges(self%cells(ii)%edge(jj))%v1 )%coordinate,self%vertices( self%edges(self%cells(ii)%edge(jj))%v2 )%coordinate) 
+
+
+!     end do 
+! end do 
+return 
+end subroutine get_cells_volume
+
+!evaluate cells number of adjacent cells to each cell ===============
+subroutine get_cells_nadj(self)
+implicit none 
+
+!variables - inout
+class(flux_mesh) :: self
+
+!variables - local
+integer(in64) :: ii
+
+!evaluate 
+self%cells_nadj(:) = 0
+do ii=1,self%nedge
+    if ((self%edges(ii)%c1 .GT. 0) .AND. (self%edges(ii)%c2 .GT. 0)) then 
+        self%cells_nadj(self%edges(ii)%c1) = self%cells_nadj(self%edges(ii)%c1) + 1
+        self%cells_nadj(self%edges(ii)%c2) = self%cells_nadj(self%edges(ii)%c2) + 1
+    end if 
+end do 
+return 
+end subroutine get_cells_nadj
+
+!evaluate the cells each vertex is a member of ===============
+subroutine get_vertex_cells(self)
+implicit none 
+
+!variables - inout
+class(flux_mesh) :: self
+
+!variables - local
+integer(in64) :: ii,jj,vidx
+
+!count the cells on each vertex
+do ii=1,self%nvertex
+    self%vertices(ii)%ncell = 0 
+end do
+do ii=1,self%ncell
+    do jj=1,self%cells(ii)%nedge
+        vidx = self%cells(ii)%edgev1(jj)
+        self%vertices(vidx)%ncell = self%vertices(vidx)%ncell + 1
+    end do 
+end do
+do ii=1,self%nvertex
+    allocate(self%vertices(ii)%cells(self%vertices(ii)%ncell))
+end do 
+
+!accumulate to each vertex
+do ii=1,self%nvertex
+    self%vertices(ii)%ncell = 0 
+end do
+do ii=1,self%ncell
+    do jj=1,self%cells(ii)%nedge
+        vidx = self%cells(ii)%edgev1(jj)
+        self%vertices(vidx)%ncell = self%vertices(vidx)%ncell + 1
+        self%vertices(vidx)%cells(self%vertices(vidx)%ncell) = ii
+    end do 
+end do
+return 
+end subroutine get_vertex_cells
+
+!======================================================
+!general methods ======================================
+!======================================================
+
+!edge volume ===============
+function edge_volume(v1,v2) result(aseg) !+ve area for CCW oriented shapes
+implicit none 
+
+!variables - import
+real(dp) :: v1(2),v2(2)
+
+!result
+real(dp) :: aseg
+
+!segment area
+aseg = 0.5d0*(v1(1)*v2(2) - v2(1)*v1(2))
+return 
+end function edge_volume
+   
+!speed of sound ===============
+function speed_of_sound(p,rho,gamma) result(c)
+implicit none 
+
+!variables - inout 
+real(dp) :: p,rho,gamma,c 
+
+!evaluate 
+c = sqrt(gamma*(p/rho))
+return 
+end function speed_of_sound
+
+!speed of sound (complex) ===============
+function speed_of_sound_cpx(p,rho,gamma) result(c)
+implicit none 
+
+!variables - inout 
+complex(dp) :: p,rho,gamma,c 
+
+!evaluate 
+c = sqrt(gamma*(p/rho))
+return 
+end function speed_of_sound_cpx
+
+!pressure coefficient ===============
+function pressure_coefficient(p,options) result(cp)
+implicit none 
+
+!variables - inout 
+real(dp) :: p,cp
+type(flux_options) :: options 
+
+!evaluate
+cp =  ((p/options%pinf) - 1.0d0)/(0.5d0*options%gamma*options%machinf*options%machinf)
+return 
+end function pressure_coefficient 
+
+!energy ===============
+function energy(p,rho,vel,gamma) result(e)
+implicit none 
+
+!variables - inout 
+real(dp) :: p,rho,vel,gamma,e 
+
+!evaluate 
+e = (p/((gamma - 1.0d0)*rho)) + 0.5d0*vel*vel
+return 
+end function energy
+
+!energy (complex) ===============
+function energy_cpx(p,rho,vel,gamma) result(e)
+implicit none 
+
+!variables - inout 
+complex(dp) :: p,rho,vel,gamma,e 
+
+!evaluate 
+e = (p/((gamma - 1.0d0)*rho)) + 0.5d0*vel*vel
+return 
+end function energy_cpx
+
+!stagnation pressure ===============
+function stagnation_pressure(p,mach,gamma) result(p0)
+implicit none 
+
+!variables - inout 
+real(dp) :: p,mach,gamma,p0 
+
+!evaluate
+p0 = p*(1.0d0 + 0.5d0*(gamma - 1.0d0)*mach*mach)**(gamma/(gamma - 1.0d0))
+return 
+end function stagnation_pressure 
+
+!stagnation density ===============
+function stagnation_density(rho,mach,gamma) result(rho0)
+implicit none 
+
+!variables - inout 
+real(dp) :: rho,mach,gamma,rho0 
+
+!evaluate
+rho0 = rho*(1.0d0 + 0.5d0*(gamma - 1.0d0)*mach*mach)**(gamma/(gamma - 1.0d0))
+return 
+end function stagnation_density
+
+!stagnation temperature ===============
+function stagnation_temperature(temp,mach,gamma) result(temp0)
+implicit none 
+
+!variables - inout 
+real(dp) :: temp,mach,gamma,temp0 
+
+!evaluate
+temp0 = temp*(1.0d0 + 0.5d0*(gamma - 1.0d0)*mach*mach)
+return 
+end function stagnation_temperature
+
+!change basis =========================
+function change_basis(Ma2b,va) result(vb)
+implicit none
+
+!variables - inout
+real(dp) :: va(2),vb(2)
+real(dp) :: Ma2b(2,2)
+
+!evaluate 
+vb(1) = Ma2b(1,1)*va(1) + Ma2b(1,2)*va(2)
+vb(2) = Ma2b(2,1)*va(1) + Ma2b(2,2)*va(2)
+return 
+end function change_basis
+
+!change basis (complex) =========================
+function change_basis_cpx(Ma2b,va) result(vb)
+implicit none
+
+!variables - inout
+complex(dp) :: va(2),vb(2)
+complex(dp) :: Ma2b(2,2)
+
+!evaluate 
+vb(1) = Ma2b(1,1)*va(1) + Ma2b(1,2)*va(2)
+vb(2) = Ma2b(2,1)*va(1) + Ma2b(2,2)*va(2)
+return 
+end function change_basis_cpx
+
+!get change of basis matrices =========================
+subroutine get_basis_change_2d(Ma2b,Mb2a,bx,by)
+implicit none 
+
+!variables - inout
+real(dp) :: bx(2),by(2)
+real(dp) :: Ma2b(2,2),Mb2a(2,2)
+
+!variables - local 
+real(dp) :: det 
+
+!get transform from b2a (assuming bx and by are represented as vectors in basis a)
+Mb2a(1,1) = bx(1)
+Mb2a(1,2) = by(1)
+Mb2a(2,1) = bx(2)
+Mb2a(2,2) = by(2)
+
+!get transform from a2b
+det = 1.0d0/(Mb2a(1,1)*Mb2a(2,2) - Mb2a(1,2)*Mb2a(2,1))
+Ma2b(1,1) = Mb2a(2,2)*det
+Ma2b(1,2) = -Mb2a(1,2)*det
+Ma2b(2,1) = -Mb2a(2,1)*det
+Ma2b(2,2) = Mb2a(1,1)*det
+return 
+end subroutine get_basis_change_2d
+
+!get change of basis matrices (complex) =========================
+subroutine get_basis_change_2d_cpx(Ma2b,Mb2a,bx,by)
+implicit none 
+
+!variables - inout
+complex(dp) :: bx(2),by(2)
+complex(dp) :: Ma2b(2,2),Mb2a(2,2)
+
+!variables - local 
+complex(dp) :: det 
+
+!get transform from b2a (assuming bx and by are represented as vectors in basis a)
+Mb2a(1,1) = bx(1)
+Mb2a(1,2) = by(1)
+Mb2a(2,1) = bx(2)
+Mb2a(2,2) = by(2)
+
+!get transform from a2b
+det = 1.0d0/(Mb2a(1,1)*Mb2a(2,2) - Mb2a(1,2)*Mb2a(2,1))
+Ma2b(1,1) = Mb2a(2,2)*det
+Ma2b(1,2) = -Mb2a(1,2)*det
+Ma2b(2,1) = -Mb2a(2,1)*det
+Ma2b(2,2) = Mb2a(1,1)*det
+return 
+end subroutine get_basis_change_2d_cpx
+
+!primative to conservative variables ===============
+subroutine prim2con(rho,u,v,p,gamma,w1,w2,w3,w4)
+implicit none 
+
+!variables - inout
+real(dp) :: rho,u,v,p,gamma,w1,w2,w3,w4
+
+!evaluate
+w1 = rho
+w2 = rho*u 
+w3 = rho*v  
+w4 = rho*energy(p,rho,sqrt(u*u + v*v),gamma)
+return 
+end subroutine prim2con
+
+!primative to conservative variables (complex) ===============
+subroutine prim2con_cpx(rho,u,v,p,gamma,w1,w2,w3,w4)
+implicit none 
+
+!variables - inout
+complex(dp) :: rho,u,v,p,gamma,w1,w2,w3,w4
+
+!evaluate
+w1 = rho
+w2 = rho*u 
+w3 = rho*v  
+w4 = rho*energy_cpx(p,rho,sqrt(u*u + v*v),gamma)
+return 
+end subroutine prim2con_cpx
+
+!conservative to primative variables ===============
+subroutine con2prim(rho,u,v,p,e,gamma,w1,w2,w3,w4)
+implicit none 
+
+!variables - inout
+real(dp) :: rho,u,v,p,e,gamma,w1,w2,w3,w4
+
+!variables - local 
+real(dp) :: vel2
+
+!evaluate
+rho = w1
+u = w2/w1
+v = w3/w1
+e = w4/w1
+vel2 = u*u + v*v 
+p = (e - 0.5d0*vel2)*(gamma - 1.0)*w1
+return 
+end subroutine con2prim
+
+!conservative to primative variables (complex) ===============
+subroutine con2prim_cpx(rho,u,v,p,e,gamma,w1,w2,w3,w4)
+implicit none 
+
+!variables - inout
+complex(dp) :: rho,u,v,p,e,gamma,w1,w2,w3,w4
+
+!variables - local 
+complex(dp) :: vel2
+
+!evaluate
+rho = w1
+u = w2/w1
+v = w3/w1
+e = w4/w1
+vel2 = u*u + v*v 
+p = (e - 0.5d0*vel2)*(gamma - 1.0)*w1
+return 
+end subroutine con2prim_cpx
+
+!set default options ===============
+subroutine set_default_options(options)
+
+!variables - inout 
+type(flux_options) :: options 
+
+!general
+options%cdisplay = .true.
+options%meshpath = 'grid'
+
+!flow conditions
+options%aoadeg = 0.0d0 
+options%machinf = 0.5d0 
+options%gamma = 1.4d0 
+options%R = 287.058d0
+options%tinf = 288.0d0
+options%rhoinf = 1.225d0 
+options%outflow_pratio = 0.8d0
+
+!solve options
+options%niter_max = 10000
+options%cfl = 2.0
+options%k2 = 0.5d0 
+options%k4 = 0.1d0
+options%num_threads = 1
+options%residual_convtol = -8.0 
+options%flux_method = 'vanleer'
+
+!adjoint options
+options%adjoint_objective = 'cd'
+
+!rk options
+options%rk_niter = 4
+allocate(options%rk_dissipation(options%rk_niter))
+options%rk_dissipation(1) = .false.
+options%rk_dissipation(2) = .false.
+options%rk_dissipation(3) = .false.
+options%rk_dissipation(4) = .false.
+return 
+end subroutine set_default_options
+
+end module flux_data_methods
