@@ -235,7 +235,7 @@ opt_str = scan_opt_str(fh,str_tag)
 
 !Set logical option 
 if (opt_str .NE. 'na') then
-    if (trim(opt_str) == 'yes') then 
+    if ((trim(opt_str) == 'yes') .OR. (trim(opt_str) == 'true')) then 
         opt_log = .true.
     else 
         opt_log = .false.

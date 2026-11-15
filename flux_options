@@ -2,10 +2,10 @@
 #version 0.0.2
 
 #console display output
-console_display = yes
+console_display = true
 
 #mesh path 
-meshpath = grid_cell_cavos_rand8x8
+meshpath = grid_cell_naca
 
 #flow conditions 
 aoadeg = 10.0
@@ -17,10 +17,10 @@ rhoinf = 1.225
 outflow_pratio = 0.0
 
 #solver options 
-niter_max = 10000
-cfl = 0.8
-k2 = 0.01 
-k4 = 0.01
+niter_max = 100
+cfl = 2.0
+k2 = 0.001 
+k4 = 0.001
 flux_method = ausm+up
 num_threads = 0
 residual_convtol = -8.0 

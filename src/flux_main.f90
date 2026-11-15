@@ -1,18 +1,17 @@
 !flux 2d - a cell based euler solver
 !max wood
-!version : 0.0.9
-!updated : 04-07-26
+!version : 2.0.0
+!updated : 15-11-26
 
 !program 
 program flux2d
 use flux_io
-use flux_solve
-use flux_adjoint
+use flux_mesh
 implicit none 
 
-!variables 
-type(flux_mesh) :: mesh 
-type(flux_options) :: options 
+!variables
+type(mesh_type) :: mesh
+type(options_type) :: options
 
 !set default options 
 call set_default_options(options)
@@ -27,9 +26,9 @@ call read_options(options)
 if (options%cdisplay) then
     write(*,'(A)') ' '
     write(*,'(A)')'+--------------------------------------------+'
-    write(*,'(A)')'|                   flux 2d                  |'
+    write(*,'(A)')'|                flux GPU 2d                 |'
     write(*,'(A)')'|      2d unstructured euler flow solver     |'
-    write(*,'(A)')'|       Version 0.0.9 || 04/07/2026          |'
+    write(*,'(A)')'|       Version 2.0.0 || 15/11/2026          |'
     write(*,'(A)')'|                 Max Wood                   |'
     write(*,'(A)')'|           University of Bristol            |'
     write(*,'(A)')'|    Department of Aerospace Engineering     |'
@@ -42,59 +41,27 @@ if (options%cdisplay) then
     write(*,'(A)') ' '
 end if
 
-!import mesh 
+!import and preprocess mesh 
 if (options%cdisplay) then
-    write(*,'(A)') '--> importing mesh: '//trim(options%meshpath)//trim(options%meshname)
+    write(*,'(A)') '--> reading mesh: '//trim(options%meshpath)//trim(options%meshname)
 end if 
-call import_mesh(mesh,options,options%meshpath)
+call read_mesh(mesh,options%meshpath)
 if (options%cdisplay) then
     write(*,'(A,I0,A)') '    {ncell = ',mesh%ncell,'}' 
     write(*,'(A,I0,A)') '    {nedge = ',mesh%nedge,'}' 
     write(*,'(A,I0,A)') '    {nvertex = ',mesh%nvertex,'}' 
-    write(*,'(A,E12.6,A,E12.6,A)') '    {cell volume (max/min) = ',maxval(mesh%cells_volume),' / ',&
-    minval(mesh%cells_volume),'}' 
-end if 
-
-!initialise the flowfield
-if (options%cdisplay) then
-    write(*,'(A)') '--> initialising'
-end if 
-call flux_flow_initialise(mesh,options)
-
-!mode switch 
-if (options%mode == 'solve') then !primal solve
-
-    !solve 
-    if (options%cdisplay) then
-        write(*,'(A)') '--> solving'
-    end if 
-    call flux_flow_solve(mesh,options)
-
-    !post-process 
-    ! call write_vtk(mesh,options,'flow.vtk')
-    call write_vtu(mesh,options,'flow.vtu')
-    call write_flow_field('flowfield',mesh)
-    call write_forces('forces',mesh)
-elseif (options%mode == 'adjoint') then !adjoint solve
-
-    !ADD ADJOINT DISSIPATION 
-
-    !adjoint dev =====================
-
-    !import solution
-    call read_flow_field('flowfield',mesh)
-
-    !adjoint solve 
-    call flux_adjoint_solve(mesh,options)
-
-    !post-process 
-    ! call write_vtk(mesh,options,'flow.vtk')
-    call write_vtu(mesh,options,'flow.vtu')
-    call write_gradient('gradient',mesh)
-    call write_forces('forces',mesh)
 end if 
 if (options%cdisplay) then
-    print *, 'COMPLETE'
+    write(*,'(A)') '--> preprocessing mesh'
 end if 
-stop 
-end program flux2d 
+! if (options%cdisplay) then
+!     write(*,'(A,E12.6,A,E12.6,A)') '    {cell volume (max/min) = ',maxval(mesh%cells_volume),' / ',&
+!     minval(mesh%cells_volume),'}' 
+! end if 
+
+
+
+
+
+
+end program flux2d

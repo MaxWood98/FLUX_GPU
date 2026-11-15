@@ -1,13 +1,5 @@
-#build arguments  #-Wall -fbounds-check -ffpe-trap=underflow,zero -fopt-info-optimized=$@_opt.dat
-# buildargs = -O0 -Wall -fbounds-check -ffpe-trap=zero,overflow,underflow,invalid,denormal -fbacktrace -fcheck=all -fopenmp
-# buildargs = -O0 -Wall -fbounds-check -fbacktrace -fcheck=all -fopenmp
-# buildargs = -O0 -fopenmp
-# buildargs = -O2 -fopenmp -pg -g -no-pie
-# buildargs = -O2 -fopenmp 
-# buildargs = -O2 -fopt-info-optimized=$@_opt.dat
-# buildargs = -O3 -march=native -ffast-math -fopenmp -fno-stack-arrays -fno-protect-parens
-# buildargs = -O3 -march=native -ffast-math -funroll-loops -ftree-vectorize -fopenmp
-buildargs = -O3 -Mbackslash -acc -Minfo=accel -gpu=cc89
+#build arguments
+buildargs = -O0 -Wall -Mbackslash -acc -Minfo=accel -gpu=cc89
 
 #build settings
 buildsettings = -module obj
@@ -18,20 +10,10 @@ OBJDIR = obj/
 #list object file names -> 1 for each .f90 in the correct compilation order
 OBJS = $(addprefix $(OBJDIR), \
 		io_utilities_module.o\
-		flux_data_methods.o\
+		flux_data.o\
+		flux_mesh.o\
 		flux_io.o\
-		flux_edge_flux.o\
-		flux_solve.o\
-		flux_adjoint.o\
 		)
-
-# OBJS = $(addprefix $(OBJDIR), \
-# 		io_utilities_module.o\
-# 		flux_data_methods.o\
-# 		flux_io.o\
-# 		flux_edge_flux.o\
-# 		flux_solve.o\
-# 		)
 
 #object patturn rules -> for every file in "dir"/*.f90, make the file *.o in $(OBJDIR) from it
 $(OBJDIR)%.o : src/%.f90
