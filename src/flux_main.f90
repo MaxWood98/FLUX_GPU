@@ -6,6 +6,7 @@
 !program 
 program flux2d
 use flux_io
+use flux_data
 use flux_mesh
 implicit none 
 
@@ -28,7 +29,7 @@ if (options%cdisplay) then
     write(*,'(A)')'+--------------------------------------------+'
     write(*,'(A)')'|                flux GPU 2d                 |'
     write(*,'(A)')'|      2d unstructured euler flow solver     |'
-    write(*,'(A)')'|       Version 2.0.0 || 15/11/2026          |'
+    write(*,'(A)')'|       Version 2.0.0 || 19/11/2026          |'
     write(*,'(A)')'|                 Max Wood                   |'
     write(*,'(A)')'|           University of Bristol            |'
     write(*,'(A)')'|    Department of Aerospace Engineering     |'
@@ -54,14 +55,25 @@ end if
 if (options%cdisplay) then
     write(*,'(A)') '--> preprocessing mesh'
 end if 
-! if (options%cdisplay) then
-!     write(*,'(A,E12.6,A,E12.6,A)') '    {cell volume (max/min) = ',maxval(mesh%cells_volume),' / ',&
-!     minval(mesh%cells_volume),'}' 
-! end if 
+call initialise_mesh(mesh)
+if (options%cdisplay) then
+    write(*,'(A,I0,A,I0,A)') '    {cell nedge (max/min) = ',mesh%cell_max_nedge,' / ',mesh%cell_min_nedge,'}'
+    write(*,'(A,E12.6,A,E12.6,A)') '    {cell volume (max/min) = ',maxval(mesh%cells_volume),' / ',minval(mesh%cells_volume),'}' 
+end if 
+
+!initialise the flowfield
+if (options%cdisplay) then
+    write(*,'(A)') '--> initialising'
+end if 
 
 
+!mode switch 
+if (options%mode == 'solve') then !primal solve
 
+elseif (options%mode == 'adjoint') then !adjoint solve
 
-
-
+end if 
+if (options%cdisplay) then
+    print *, 'COMPLETE'
+end if 
 end program flux2d

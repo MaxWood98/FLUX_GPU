@@ -1,5 +1,5 @@
 #build arguments
-buildargs = -O0 -Wall -Mbackslash -acc -Minfo=accel -gpu=cc89
+buildargs = -O0 -Wall -Mbounds -Mbackslash -acc -Minfo=accel -gpu=cc89
 
 #build settings
 buildsettings = -module obj
@@ -11,8 +11,10 @@ OBJDIR = obj/
 OBJS = $(addprefix $(OBJDIR), \
 		io_utilities_module.o\
 		flux_data.o\
-		flux_mesh.o\
+		flux_geometry.o\
 		flux_io.o\
+		flux_mesh.o\
+		flux_solve.o\
 		)
 
 #object patturn rules -> for every file in "dir"/*.f90, make the file *.o in $(OBJDIR) from it

@@ -29,10 +29,12 @@ end type options_type
 !mesh type
 type mesh_type
     integer(in32) :: nvertex,nedge,ncell 
+    integer(in32) :: cell_max_nedge,cell_min_nedge,ncell_edges
     integer(in32), dimension(:), allocatable :: edge_order,cell_order
     integer(in32), dimension(:), allocatable :: edges_v1,edges_v2,edges_c1,edges_c2
-    integer(in32), dimension(:), allocatable :: cells_edges_start,cells_edges,cells_edges_sign
-    real(dp), dimension(:), allocatable :: edges_length,edges_nx,edges_ny
+    integer(in32), dimension(:), allocatable :: cells_edges_start,cells_edges
+    real(dp), dimension(:), allocatable :: cells_edges_sign
+    real(dp), dimension(:), allocatable :: edges_length,edges_nx,edges_ny,edges_dx,edges_dy,cells_volume
     real(dp), dimension(:,:), allocatable :: vertices
 end type mesh_type
 

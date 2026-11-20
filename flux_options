@@ -6,6 +6,7 @@ console_display = true
 
 #mesh path 
 meshpath = grid_cell_naca
+#meshpath = grid_cell_cavos_rand8x8
 
 #flow conditions 
 aoadeg = 10.0
